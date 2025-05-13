@@ -1,5 +1,4 @@
 import { defineConfig } from '@vben/vite-config';
-import { resolve } from 'path';
 
 // 自行取消注释来启用按需导入功能
 // import { AntDesignVueResolver } from 'unplugin-vue-components/resolvers';
@@ -22,11 +21,6 @@ export default defineConfig(async () => {
         //   ],
         // }),
       ],
-      resolve: {
-        alias: {
-          '@': resolve(__dirname, './src'),
-        },
-      },
       server: {
         proxy: {
           '/api': {

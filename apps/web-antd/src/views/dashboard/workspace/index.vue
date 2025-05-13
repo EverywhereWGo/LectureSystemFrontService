@@ -48,15 +48,6 @@ const projectItems: WorkbenchProjectItem[] = [
     url: 'https://vuejs.org',
   },
   {
-    color: '#7952b3',
-    content: '线上讲座预约与管理系统，智能排期，数据分析。',
-    date: '2023-08-01',
-    group: '教学创新',
-    icon: 'ion:calendar-outline',
-    title: '讲座管理系统',
-    url: '/lecture/lecture',
-  },
-  {
     color: '#e18525',
     content: '没有什么才能比努力更重要。',
     date: '2021-04-01',
@@ -119,12 +110,6 @@ const quickNavItems: WorkbenchQuickNavItem[] = [
     icon: 'ion:settings-outline',
     title: '系统管理',
     url: '/demos/features/login-expired', // 这里的 URL 是示例，实际项目中需要根据实际情况进行调整
-  },
-  {
-    color: '#7952b3',
-    icon: 'ion:calendar-outline',
-    title: '讲座管理',
-    url: '/lecture/lecture',
   },
   {
     color: '#4daf1bc9',
@@ -233,7 +218,7 @@ const router = useRouter();
 
 // 这是一个示例方法，实际项目中需要根据实际情况进行调整
 // This is a sample method, adjust according to the actual project requirements
-function navTo(nav: WorkbenchProjectItem | WorkbenchQuickNavItem | { url: string; title?: string; icon?: string }) {
+function navTo(nav: WorkbenchProjectItem | WorkbenchQuickNavItem) {
   if (nav.url?.startsWith('http')) {
     openWindow(nav.url);
     return;
@@ -243,7 +228,7 @@ function navTo(nav: WorkbenchProjectItem | WorkbenchQuickNavItem | { url: string
       console.error('Navigation failed:', error);
     });
   } else {
-    console.warn(`Unknown URL for navigation item: ${nav.title || 'Unknown'} -> ${nav.url}`);
+    console.warn(`Unknown URL for navigation item: ${nav.title} -> ${nav.url}`);
   }
 }
 </script>
@@ -272,33 +257,6 @@ function navTo(nav: WorkbenchProjectItem | WorkbenchQuickNavItem | { url: string
           @click="navTo"
         />
         <WorkbenchTodo :items="todoItems" class="mt-5" title="待办事项" />
-        <AnalysisChartCard class="mt-5" title="即将到来的讲座">
-          <div class="upcoming-lectures">
-            <div class="lecture-item flex items-center justify-between p-2 hover:bg-gray-50 cursor-pointer" @click="navTo({url: '/lecture/lecture/detail/1', title: '人工智能讲座', icon: 'ion:calendar-outline'})">
-              <div>
-                <div class="font-medium">人工智能与未来社会发展</div>
-                <div class="text-gray-500 text-sm">
-                  <span class="mr-3">2025-05-15 14:00-16:00</span>
-                  <span>张教授</span>
-                </div>
-              </div>
-              <div class="text-blue-500">已预约</div>
-            </div>
-            <div class="lecture-item flex items-center justify-between p-2 hover:bg-gray-50 cursor-pointer" @click="navTo({url: '/lecture/lecture/detail/2', title: '数据科学讲座', icon: 'ion:calendar-outline'})">
-              <div>
-                <div class="font-medium">数据科学应用实践</div>
-                <div class="text-gray-500 text-sm">
-                  <span class="mr-3">2025-05-20 10:00-12:00</span>
-                  <span>李教授</span>
-                </div>
-              </div>
-              <div class="text-green-500">可预约</div>
-            </div>
-            <div class="text-right p-2">
-              <a class="text-blue-500 cursor-pointer" @click="navTo({url: '/lecture/recommend', title: '更多讲座', icon: 'ion:calendar-outline'})">查看更多</a>
-            </div>
-          </div>
-        </AnalysisChartCard>
         <AnalysisChartCard class="mt-5" title="访问来源">
           <AnalyticsVisitsSource />
         </AnalysisChartCard>

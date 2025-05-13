@@ -218,37 +218,28 @@ function createRequestClient(baseURL: string) {
         // 没有data 将其他参数包装为data
         return other;
       }
-      
       // 在此处根据自己项目的实际情况对不同的code执行不同的操作
       // 如果不希望中断当前请求，请return数据，否则直接抛出异常即可
       let timeoutMsg = '';
-      
-      // 特殊处理类型转换错误
-      if (msg && (msg.includes('cannot find converter') || msg.includes('MapStruct') || msg.includes('类型转换'))) {
-        console.error('MapStruct类型转换错误:', msg);
-        timeoutMsg = '系统类型转换错误，请联系系统管理员检查MapStruct配置';
-        throw new Error(timeoutMsg);
-      } else {
-        switch (code) {
-          case 401: {
-            // 已经在登出过程中 不再执行
-            if (isLogoutProcessing) {
-              throw new Error(timeoutMsg);
-            }
-            isLogoutProcessing = true;
-            const _msg = $t('http.loginTimeout');
-            const userStore = useAuthStore();
-            userStore.logout().finally(() => {
-              message.error(_msg);
-              isLogoutProcessing = false;
-            });
-            // 不再执行下面逻辑
-            throw new Error(_msg);
+      switch (code) {
+        case 401: {
+          // 已经在登出过程中 不再执行
+          if (isLogoutProcessing) {
+            throw new Error(timeoutMsg);
           }
-          default: {
-            if (msg) {
-              timeoutMsg = msg;
-            }
+          isLogoutProcessing = true;
+          const _msg = $t('http.loginTimeout');
+          const userStore = useAuthStore();
+          userStore.logout().finally(() => {
+            message.error(_msg);
+            isLogoutProcessing = false;
+          });
+          // 不再执行下面逻辑
+          throw new Error(_msg);
+        }
+        default: {
+          if (msg) {
+            timeoutMsg = msg;
           }
         }
       }

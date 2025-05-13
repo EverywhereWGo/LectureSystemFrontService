@@ -23,8 +23,7 @@
     "typecheck": "vue-tsc --noEmit --skipLibCheck"
   },
   "imports": {
-    "#/*": "./src/*",
-    "@/*": "./src/*"
+    "#/*": "./src/*"
   },
   "dependencies": {
     "@ant-design/icons-vue": "^7.0.1",

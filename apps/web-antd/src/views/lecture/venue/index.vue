@@ -1,15 +1,16 @@
-<template>
-  <div>
-    <a-card title="场地管理">
-      <p>场地管理页面</p>
-    </a-card>
-  </div>
-</template>
-
 <script lang="ts" setup>
-// 场地管理组件
+import { Card } from 'ant-design-vue';
 </script>
 
-<style scoped>
-/* 场地管理样式 */
-</style> 
+<template>
+  <Card title="场地管理" class="mb-4">
+    <p>这里是场地管理页面，您可以在此管理所有讲座场地信息。</p>
+    <p>即将开发的功能包括：</p>
+    <ul>
+      <li>场地列表展示</li>
+      <li>场地新增/编辑/删除</li>
+      <li>场地设备配置</li>
+      <li>场地使用记录</li>
+    </ul>
+  </Card>
+</template>
