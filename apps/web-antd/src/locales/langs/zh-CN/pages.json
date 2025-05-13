@@ -22,5 +22,24 @@
     "tip": "提示",
     "enable": "启用",
     "disable": "禁用"
+  },
+  "routes": {
+    "demo": {
+      "lecture": {
+        "moduleName": "讲座管理",
+        "lecture": "讲座管理",
+        "venue": "场地管理",
+        "reservation": "预约管理",
+        "checkIn": "签到管理",
+        "feedback": "反馈管理",
+        "recommend": "讲座推荐",
+        "detail": "讲座详情",
+        "stats": "数据统计",
+        "schedule": "讲座排程",
+        "notification": "通知管理",
+        "notificationCreate": "发布通知",
+        "recommender": "推荐管理"
+      }
+    }
   }
 }

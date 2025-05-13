@@ -1,130 +1,108 @@
-import type { AppRouteModule } from '@/router/types';
-import { LAYOUT } from '@/router/constant';
-import { t } from '@/hooks/web/useI18n';
-import { RoleEnum } from '@/enums/roleEnum';
+import { LAYOUT } from '../../constants';
 
 /**
- * 讲座模块路由
+ * 讲座管理模块路由
  */
-const lecture: AppRouteModule = {
+const lecture = {
   path: '/lecture',
   name: 'Lecture',
   component: LAYOUT,
-  redirect: '/lecture/recommend',
+  redirect: '/lecture/lecture',
   meta: {
-    orderNo: 50,
-    icon: 'ion:school-outline',
-    title: t('routes.demo.lecture.moduleName'),
-    ignoreAuth: false,
+    orderNo: 5000,
+    icon: 'ion:apps-outline',
+    title: '讲座管理',
   },
   children: [
     {
       path: 'lecture',
-      name: 'LectureMgr',
-      component: () => import('@/views/lecture/lecture/index.vue'),
+      name: 'LectureManagement',
+      component: () => import('#/views/lecture/lecture/index.vue'),
       meta: {
-        title: t('routes.demo.lecture.lecture'),
-        ignoreKeepAlive: false,
-        roles: [RoleEnum.ADMIN, RoleEnum.SUPER],
+        title: '讲座管理',
       },
     },
     {
       path: 'venue',
-      name: 'LectureVenue',
-      component: () => import('@/views/lecture/venue/index.vue'),
+      name: 'VenueManagement',
+      component: () => import('#/views/lecture/venue/index.vue'),
       meta: {
-        title: t('routes.demo.lecture.venue'),
-        ignoreKeepAlive: false,
-        roles: [RoleEnum.ADMIN, RoleEnum.SUPER],
+        title: '场地管理',
       },
     },
     {
       path: 'reservation',
-      name: 'LectureReservation',
-      component: () => import('@/views/lecture/reservation/index.vue'),
+      name: 'ReservationManagement',
+      component: () => import('#/views/lecture/reservation/index.vue'),
       meta: {
-        title: t('routes.demo.lecture.reservation'),
-        ignoreKeepAlive: false,
+        title: '预约管理',
       },
     },
     {
-      path: 'check-in',
-      name: 'LectureCheckIn',
-      component: () => import('@/views/lecture/checkIn/index.vue'),
+      path: 'checkin',
+      name: 'CheckInManagement',
+      component: () => import('#/views/lecture/checkin/index.vue'),
       meta: {
-        title: t('routes.demo.lecture.checkIn'),
-        ignoreKeepAlive: false,
+        title: '签到管理',
       },
     },
     {
       path: 'feedback',
-      name: 'LectureFeedback',
-      component: () => import('@/views/lecture/feedback/index.vue'),
+      name: 'FeedbackManagement',
+      component: () => import('#/views/lecture/feedback/index.vue'),
       meta: {
-        title: t('routes.demo.lecture.feedback'),
-        ignoreKeepAlive: false,
+        title: '评价管理',
       },
     },
     {
       path: 'recommend',
-      name: 'LectureRecommend',
-      component: () => import('@/views/lecture/recommend/index.vue'),
+      name: 'RecommendManagement',
+      component: () => import('#/views/lecture/recommend/index.vue'),
       meta: {
-        title: t('routes.demo.lecture.recommend'),
-        ignoreKeepAlive: false,
-        roles: [RoleEnum.TEST],
+        title: '推荐管理',
       },
     },
     {
       path: 'lecture/detail/:id',
       name: 'LectureDetail',
-      component: () => import('@/views/lecture/recommend/detail.vue'),
+      component: () => import('#/views/lecture/lecture/detail.vue'),
       meta: {
-        title: t('routes.demo.lecture.detail'),
-        ignoreKeepAlive: false,
+        title: '讲座详情',
         hideMenu: true,
-        showMenu: false,
-        hideTab: false,
-        currentActiveMenu: '/lecture/recommend',
+        ignoreAuth: true,
       },
     },
     {
       path: 'stats',
-      name: 'LectureStats',
-      component: () => import('@/views/lecture/stats/index.vue'),
+      name: 'StatsManagement',
+      component: () => import('#/views/lecture/stats/index.vue'),
       meta: {
-        title: t('routes.demo.lecture.stats'),
-        ignoreKeepAlive: false,
-        roles: [RoleEnum.ADMIN, RoleEnum.SUPER],
+        title: '统计分析',
       },
     },
     {
       path: 'schedule',
-      name: 'LectureSchedule',
-      component: () => import('@/views/lecture/schedule/index.vue'),
+      name: 'ScheduleManagement',
+      component: () => import('#/views/lecture/schedule/index.vue'),
       meta: {
-        title: t('routes.demo.lecture.schedule'),
-        ignoreKeepAlive: false,
-        roles: [RoleEnum.ADMIN],
+        title: '智能排期',
       },
     },
     {
       path: 'notification',
-      name: 'LectureNotification',
-      component: () => import('@/views/lecture/notification/index.vue'),
+      name: 'NotificationManagement',
+      component: () => import('#/views/lecture/notification/index.vue'),
       meta: {
-        title: t('routes.demo.lecture.notification'),
-        ignoreKeepAlive: false,
+        title: '通知管理',
       },
     },
     {
-      path: 'recommender',
-      name: 'LectureRecommender',
-      component: () => import('@/views/lecture/recommender/index.vue'),
+      path: 'notification/create',
+      name: 'NotificationCreate',
+      component: () => import('#/views/lecture/notification/create.vue'),
       meta: {
-        title: t('routes.demo.lecture.recommender'),
-        ignoreKeepAlive: false,
-        roles: [RoleEnum.ADMIN, RoleEnum.SUPER],
+        title: '创建通知',
+        hideMenu: true,
       },
     },
   ],

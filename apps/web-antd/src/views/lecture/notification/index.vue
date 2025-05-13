@@ -1,40 +1,36 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue';
-import { Card, Tabs, List, Badge, Tag, Button, Spin, Empty, Modal, message, Tooltip } from 'ant-design-vue';
+import { ref, reactive, onMounted, computed, createVNode, h } from 'vue';
+import { Card, Tabs, List, Badge, Tag, Button, Spin, Empty, Modal, message } from 'ant-design-vue';
 import { 
   BellOutlined, 
-  CheckCircleOutlined, 
-  CloseCircleOutlined, 
   InfoCircleOutlined, 
-  WarningOutlined, 
   DeleteOutlined, 
   CheckOutlined,
-  ExclamationCircleOutlined
+  ExclamationCircleOutlined,
+  PlusOutlined
 } from '@ant-design/icons-vue';
-import { formatToDateTime } from '@/utils/dateUtil';
-import { useGo } from '@/hooks/web/usePage';
-import { useUserStore } from '@/store/modules/user';
+import { useRouter } from 'vue-router';
+import dayjs from 'dayjs';
+
 import { 
-  getNotificationsApi, 
+  getUserNotificationsApi, 
   markNotificationReadApi, 
-  markAllNotificationsReadApi, 
   deleteNotificationApi, 
-  getNotificationStatsApi,
-  NotificationType
-} from '@/api/lecture/notification';
+  getUnreadNotificationCountApi,
+  getNotificationDetailApi
+} from '../../../api/lecture/notification';
+
+// 通知类型枚举
+enum NotificationType {
+  SYSTEM = 'system',
+  LECTURE = 'lecture'
+}
 
 const TabPane = Tabs.TabPane;
 const activeTab = ref('all');
 const loading = ref(false);
 const detailModal = ref(false);
-const go = useGo();
-const userStore = useUserStore();
-
-// 用户数据
-const userData = reactive({
-  userId: userStore.getUserInfo?.userId || 1001,
-  username: userStore.getUserInfo?.username || '张三',
-});
+const router = useRouter();
 
 // 当前选中的通知
 const currentNotification = ref<any>(null);
@@ -51,106 +47,99 @@ const notifications = reactive({
 // 统计数据
 const stats = reactive({
   total: 0,
-  unread: 0,
-  today: 0,
-  expired: 0
+  unread: 0
 });
 
 // 计算未读通知列表
 const unreadNotifications = computed(() => {
-  return notifications.data.filter(item => !item.readStatus);
+  return notifications.data.filter(item => item.isRead === 'N');
 });
 
 // 计算已读通知列表
 const readNotifications = computed(() => {
-  return notifications.data.filter(item => item.readStatus);
+  return notifications.data.filter(item => item.isRead === 'Y');
 });
 
 // 切换选项卡
-const handleTabChange = (key: string) => {
-  activeTab.value = key;
+const handleTabChange = (key: any) => {
+  activeTab.value = key as string;
+  loadNotifications();
 };
 
 // 获取通知类型图标
 const getNotificationIcon = (type: string) => {
   switch (type) {
-    case NotificationType.LECTURE_REMINDER:
-    case NotificationType.CHECK_IN_REMINDER:
-      return <InfoCircleOutlined style="color: #1890ff" />;
-    case NotificationType.RESERVATION_SUCCESS:
-      return <CheckCircleOutlined style="color: #52c41a" />;
-    case NotificationType.RESERVATION_CANCEL:
-    case NotificationType.LECTURE_CANCEL:
-      return <CloseCircleOutlined style="color: #f5222d" />;
-    case NotificationType.LECTURE_CHANGE:
-      return <WarningOutlined style="color: #faad14" />;
-    case NotificationType.FEEDBACK_REMINDER:
-      return <BellOutlined style="color: #722ed1" />;
+    case NotificationType.LECTURE:
+      return InfoCircleOutlined;
+    case NotificationType.SYSTEM:
+      return BellOutlined;
     default:
-      return <BellOutlined style="color: #1890ff" />;
+      return BellOutlined;
   }
 };
 
 // 获取通知类型标签
 const getNotificationTag = (type: string) => {
   switch (type) {
-    case NotificationType.LECTURE_REMINDER:
-      return { color: 'blue', text: '讲座提醒' };
-    case NotificationType.CHECK_IN_REMINDER:
-      return { color: 'geekblue', text: '签到提醒' };
-    case NotificationType.RESERVATION_SUCCESS:
-      return { color: 'green', text: '预约成功' };
-    case NotificationType.RESERVATION_CANCEL:
-      return { color: 'orange', text: '预约取消' };
-    case NotificationType.LECTURE_CANCEL:
-      return { color: 'red', text: '讲座取消' };
-    case NotificationType.LECTURE_CHANGE:
-      return { color: 'gold', text: '讲座变更' };
-    case NotificationType.FEEDBACK_REMINDER:
-      return { color: 'purple', text: '反馈提醒' };
+    case NotificationType.LECTURE:
+      return { color: 'blue', text: '讲座通知' };
+    case NotificationType.SYSTEM:
+      return { color: 'purple', text: '系统通知' };
     default:
-      return { color: 'default', text: '系统通知' };
+      return { color: 'default', text: '其他通知' };
   }
 };
 
-// 获取通知优先级样式
-const getPriorityStyle = (priority: number) => {
-  switch (priority) {
-    case 3:
-      return { color: '#f5222d', text: '高' };
-    case 2:
-      return { color: '#faad14', text: '中' };
-    case 1:
+// 获取图标颜色
+const getIconColor = (type: string) => {
+  switch (type) {
+    case NotificationType.LECTURE:
+      return "#1890ff";
+    case NotificationType.SYSTEM:
+      return "#722ed1";
     default:
-      return { color: '#52c41a', text: '低' };
+      return "#1890ff";
   }
 };
 
 // 查看通知详情
-const viewNotificationDetail = (notification: any) => {
-  currentNotification.value = notification;
-  detailModal.value = true;
-  
-  // 如果未读，标记为已读
-  if (!notification.readStatus) {
-    markNotificationRead(notification.id);
+const viewNotificationDetail = async (notification: any) => {
+  try {
+    const res = await getNotificationDetailApi(notification.notificationId);
+    if (res.code === 200) {
+      currentNotification.value = res.data;
+      detailModal.value = true;
+      
+      // 如果未读，标记为已读
+      if (notification.isRead === 'N') {
+        markNotificationRead(notification.notificationId);
+      }
+    }
+  } catch (error) {
+    console.error('获取通知详情失败', error);
+    message.error('获取通知详情失败');
   }
 };
 
 // 标记通知为已读
-const markNotificationRead = async (id: number) => {
+const markNotificationRead = async (notificationId: number) => {
   try {
-    const res = await markNotificationReadApi(id);
+    const res = await markNotificationReadApi(notificationId);
     if (res.code === 200) {
       // 更新本地数据
-      const index = notifications.data.findIndex(item => item.id === id);
+      const index = notifications.data.findIndex(item => item.notificationId === notificationId);
       if (index !== -1) {
-        notifications.data[index].readStatus = true;
+        notifications.data[index].isRead = 'Y';
       }
       
       // 更新统计数据
       if (stats.unread > 0) {
         stats.unread--;
+      }
+      
+      // 如果在未读标签页，刷新列表
+      if (activeTab.value === 'unread') {
+        loadNotifications();
       }
     }
   } catch (error) {
@@ -158,48 +147,22 @@ const markNotificationRead = async (id: number) => {
   }
 };
 
-// 标记所有通知为已读
-const markAllRead = async () => {
-  if (stats.unread === 0) {
-    message.info('没有未读通知');
-    return;
-  }
-  
-  try {
-    const res = await markAllNotificationsReadApi(userData.userId);
-    if (res.code === 200) {
-      // 更新本地数据
-      notifications.data.forEach(item => {
-        item.readStatus = true;
-      });
-      
-      // 更新统计数据
-      stats.unread = 0;
-      
-      message.success('已将所有通知标记为已读');
-    }
-  } catch (error) {
-    console.error('标记所有通知已读失败', error);
-    message.error('操作失败，请稍后重试');
-  }
-};
-
 // 删除通知
-const deleteNotification = (id: number) => {
+const deleteNotification = (notificationId: number) => {
   Modal.confirm({
     title: '确认删除',
-    icon: <ExclamationCircleOutlined />,
+    icon: createVNode(ExclamationCircleOutlined),
     content: '确定要删除此通知吗？删除后无法恢复。',
     okText: '确认',
     cancelText: '取消',
     onOk: async () => {
       try {
-        const res = await deleteNotificationApi(id);
+        const res = await deleteNotificationApi([notificationId]);
         if (res.code === 200) {
           // 更新本地数据
-          const index = notifications.data.findIndex(item => item.id === id);
+          const index = notifications.data.findIndex(item => item.notificationId === notificationId);
           if (index !== -1) {
-            const isUnread = !notifications.data[index].readStatus;
+            const isUnread = notifications.data[index].isRead === 'N';
             notifications.data.splice(index, 1);
             
             // 更新统计数据
@@ -212,7 +175,7 @@ const deleteNotification = (id: number) => {
           message.success('删除成功');
           
           // 如果是在详情模态框中删除，则关闭模态框
-          if (detailModal.value && currentNotification.value?.id === id) {
+          if (detailModal.value && currentNotification.value?.notificationId === notificationId) {
             detailModal.value = false;
           }
         }
@@ -226,54 +189,49 @@ const deleteNotification = (id: number) => {
 
 // 跳转到相关页面
 const goToTarget = (notification: any) => {
-  if (!notification.targetId || !notification.targetType) {
+  if (!notification.lectureId) {
     return;
   }
   
-  switch (notification.targetType) {
-    case 'lecture':
-      go(`/lecture/lecture/detail/${notification.targetId}`);
-      break;
-    case 'check-in':
-      go('/lecture/check-in');
-      break;
-    case 'reservation':
-      go('/lecture/reservation');
-      break;
-    case 'feedback':
-      go('/lecture/feedback');
-      break;
-    default:
-      break;
-  }
+  router.push(`/lecture/lecture/detail/${notification.lectureId}`);
   
   // 关闭详情模态框
   detailModal.value = false;
 };
 
-// 检查通知是否已过期
-const isExpired = (expireTime: string) => {
-  if (!expireTime) return false;
-  return new Date(expireTime) < new Date();
+// 创建新通知
+const createNotification = () => {
+  router.push('/lecture/notification/create');
+};
+
+// 格式化日期时间
+const formatToDateTime = (date?: string | Date | null) => {
+  if (!date) return '';
+  return dayjs(date).format('YYYY-MM-DD HH:mm:ss');
 };
 
 // 加载通知列表
 const loadNotifications = async () => {
   notifications.loading = true;
   try {
-    const res = await getNotificationsApi({
-      userId: userData.userId,
+    const params: Record<string, any> = {
       pageNum: notifications.pageNum,
       pageSize: notifications.pageSize
-    });
+    };
+    
+    // 根据当前标签页筛选
+    if (activeTab.value === 'unread') {
+      params.isRead = 'N';
+    } else if (activeTab.value === 'read') {
+      params.isRead = 'Y';
+    }
+    
+    const res = await getUserNotificationsApi(params);
     
     if (res.code === 200) {
-      if (res.data && res.data.rows) {
-        notifications.data = res.data.rows;
-        notifications.total = res.data.total;
-      } else {
-        notifications.data = res.data || [];
-      }
+      notifications.data = res.rows || [];
+      notifications.total = res.total || 0;
+      stats.total = res.total || 0;
     }
   } catch (error) {
     console.error('获取通知列表失败', error);
@@ -282,24 +240,21 @@ const loadNotifications = async () => {
   }
 };
 
-// 加载统计数据
-const loadStats = async () => {
+// 加载未读通知数量
+const loadUnreadCount = async () => {
   try {
-    const res = await getNotificationStatsApi(userData.userId);
+    const res = await getUnreadNotificationCountApi();
     if (res.code === 200) {
-      stats.total = res.data.total;
-      stats.unread = res.data.unread;
-      stats.today = res.data.today;
-      stats.expired = res.data.expired;
+      stats.unread = res.data || 0;
     }
   } catch (error) {
-    console.error('获取通知统计数据失败', error);
+    console.error('获取未读通知数量失败', error);
   }
 };
 
 onMounted(() => {
   loadNotifications();
-  loadStats();
+  loadUnreadCount();
 });
 </script>
 
@@ -309,19 +264,16 @@ onMounted(() => {
       <template #title>
         <div class="card-title">
           <span><BellOutlined /> 我的通知</span>
-          <div class="notification-stats">
-            <Badge :count="stats.unread" :offset="[0, 0]" />
-            <span class="stats-label">未读通知</span>
-            <Badge :count="stats.today" :offset="[0, 0]" showZero />
-            <span class="stats-label">今日通知</span>
+          <div class="card-actions">
+            <div class="notification-stats">
+              <Badge :count="stats.unread" :offset="[0, 0]" />
+              <span class="stats-label">未读通知</span>
+            </div>
+            <Button type="primary" @click="createNotification">
+              <PlusOutlined /> 发布通知
+            </Button>
           </div>
         </div>
-      </template>
-      <template #extra>
-        <Button type="primary" @click="markAllRead">
-          <template #icon><CheckOutlined /></template>
-          全部已读
-        </Button>
       </template>
       
       <Tabs v-model:activeKey="activeTab" @change="handleTabChange">
@@ -337,36 +289,32 @@ onMounted(() => {
                 <template #renderItem="{ item }">
                   <List.Item class="notification-item">
                     <List.Item.Meta
-                      :avatar="getNotificationIcon(item.type)"
-                      :title="
-                        <div class='notification-title' @click='viewNotificationDetail(item)'>
-                          <Badge :dot='!item.readStatus' color='red' />
-                          <span>{{ item.title }}</span>
-                          <Tag v-if='isExpired(item.expireTime)' color='default'>已过期</Tag>
-                        </div>
-                      "
-                      :description="
-                        <div class='notification-content'>
-                          <div class='notification-text'>{{ item.content }}</div>
-                          <div class='notification-meta'>
-                            <div>
-                              <Tag :color='getNotificationTag(item.type).color'>
-                                {{ getNotificationTag(item.type).text }}
-                              </Tag>
-                              <Tooltip :title='`优先级: ${getPriorityStyle(item.priority).text}`'>
-                                <span class='priority-dot' :style='{ backgroundColor: getPriorityStyle(item.priority).color }'></span>
-                              </Tooltip>
-                            </div>
-                            <span>{{ formatToDateTime(item.createTime) }}</span>
-                          </div>
-                        </div>
-                      "
+                      :avatar="h(getNotificationIcon(item.type), { style: { color: getIconColor(item.type) } })"
+                      :title="item.title"
+                      :description="item.content"
+                      @click="viewNotificationDetail(item)"
                     />
+                    <div class="notification-meta">
+                      <div>
+                        <Badge v-if="item.isRead === 'N'" dot color="red" />
+                        <Tag :color="getNotificationTag(item.type).color">
+                          {{ getNotificationTag(item.type).text }}
+                        </Tag>
+                      </div>
+                      <span>{{ formatToDateTime(item.createTime) }}</span>
+                    </div>
                     <div class="notification-actions">
+                      <Button 
+                        v-if="item.isRead === 'N'"
+                        type="link" 
+                        @click.stop="markNotificationRead(item.notificationId)"
+                      >
+                        <CheckOutlined />
+                      </Button>
                       <Button 
                         type="text" 
                         danger
-                        @click.stop="deleteNotification(item.id)"
+                        @click.stop="deleteNotification(item.notificationId)"
                       >
                         <DeleteOutlined />
                       </Button>
@@ -390,42 +338,31 @@ onMounted(() => {
                 <template #renderItem="{ item }">
                   <List.Item class="notification-item">
                     <List.Item.Meta
-                      :avatar="getNotificationIcon(item.type)"
-                      :title="
-                        <div class='notification-title' @click='viewNotificationDetail(item)'>
-                          <Badge dot color='red' />
-                          <span>{{ item.title }}</span>
-                          <Tag v-if='isExpired(item.expireTime)' color='default'>已过期</Tag>
-                        </div>
-                      "
-                      :description="
-                        <div class='notification-content'>
-                          <div class='notification-text'>{{ item.content }}</div>
-                          <div class='notification-meta'>
-                            <div>
-                              <Tag :color='getNotificationTag(item.type).color'>
-                                {{ getNotificationTag(item.type).text }}
-                              </Tag>
-                              <Tooltip :title='`优先级: ${getPriorityStyle(item.priority).text}`'>
-                                <span class='priority-dot' :style='{ backgroundColor: getPriorityStyle(item.priority).color }'></span>
-                              </Tooltip>
-                            </div>
-                            <span>{{ formatToDateTime(item.createTime) }}</span>
-                          </div>
-                        </div>
-                      "
+                      :avatar="h(getNotificationIcon(item.type), { style: { color: getIconColor(item.type) } })"
+                      :title="item.title"
+                      :description="item.content"
+                      @click="viewNotificationDetail(item)"
                     />
+                    <div class="notification-meta">
+                      <div>
+                        <Badge dot color="red" />
+                        <Tag :color="getNotificationTag(item.type).color">
+                          {{ getNotificationTag(item.type).text }}
+                        </Tag>
+                      </div>
+                      <span>{{ formatToDateTime(item.createTime) }}</span>
+                    </div>
                     <div class="notification-actions">
                       <Button 
                         type="link" 
-                        @click.stop="markNotificationRead(item.id)"
+                        @click.stop="markNotificationRead(item.notificationId)"
                       >
                         <CheckOutlined />
                       </Button>
                       <Button 
                         type="text" 
                         danger
-                        @click.stop="deleteNotification(item.id)"
+                        @click.stop="deleteNotification(item.notificationId)"
                       >
                         <DeleteOutlined />
                       </Button>
@@ -437,7 +374,7 @@ onMounted(() => {
           </Spin>
         </TabPane>
         
-        <TabPane key="read" tab="已读通知">
+        <TabPane key="read" :tab="`已读通知(${stats.total - stats.unread})`">
           <Spin :spinning="notifications.loading">
             <div class="notification-list">
               <Empty v-if="readNotifications.length === 0" description="暂无已读通知" />
@@ -449,35 +386,24 @@ onMounted(() => {
                 <template #renderItem="{ item }">
                   <List.Item class="notification-item">
                     <List.Item.Meta
-                      :avatar="getNotificationIcon(item.type)"
-                      :title="
-                        <div class='notification-title' @click='viewNotificationDetail(item)'>
-                          <span>{{ item.title }}</span>
-                          <Tag v-if='isExpired(item.expireTime)' color='default'>已过期</Tag>
-                        </div>
-                      "
-                      :description="
-                        <div class='notification-content'>
-                          <div class='notification-text'>{{ item.content }}</div>
-                          <div class='notification-meta'>
-                            <div>
-                              <Tag :color='getNotificationTag(item.type).color'>
-                                {{ getNotificationTag(item.type).text }}
-                              </Tag>
-                              <Tooltip :title='`优先级: ${getPriorityStyle(item.priority).text}`'>
-                                <span class='priority-dot' :style='{ backgroundColor: getPriorityStyle(item.priority).color }'></span>
-                              </Tooltip>
-                            </div>
-                            <span>{{ formatToDateTime(item.createTime) }}</span>
-                          </div>
-                        </div>
-                      "
+                      :avatar="h(getNotificationIcon(item.type), { style: { color: getIconColor(item.type) } })"
+                      :title="item.title"
+                      :description="item.content"
+                      @click="viewNotificationDetail(item)"
                     />
+                    <div class="notification-meta">
+                      <div>
+                        <Tag :color="getNotificationTag(item.type).color">
+                          {{ getNotificationTag(item.type).text }}
+                        </Tag>
+                      </div>
+                      <span>{{ formatToDateTime(item.createTime) }}</span>
+                    </div>
                     <div class="notification-actions">
                       <Button 
                         type="text" 
                         danger
-                        @click.stop="deleteNotification(item.id)"
+                        @click.stop="deleteNotification(item.notificationId)"
                       >
                         <DeleteOutlined />
                       </Button>
@@ -493,58 +419,29 @@ onMounted(() => {
     
     <!-- 通知详情模态框 -->
     <Modal
+      v-model:visible="detailModal"
       title="通知详情"
-      :visible="detailModal"
-      @cancel="detailModal = false"
       :footer="null"
-      width="600px"
+      width="700px"
     >
       <div v-if="currentNotification" class="notification-detail">
-        <h2 class="detail-title">{{ currentNotification.title }}</h2>
-        <div class="detail-meta">
-          <div class="detail-tags">
+        <div class="detail-header">
+          <h2 class="detail-title">{{ currentNotification.title }}</h2>
+          <div class="detail-meta">
             <Tag :color="getNotificationTag(currentNotification.type).color">
               {{ getNotificationTag(currentNotification.type).text }}
             </Tag>
-            <Tag :color="currentNotification.readStatus ? 'default' : 'red'">
-              {{ currentNotification.readStatus ? '已读' : '未读' }}
-            </Tag>
-            <Tag v-if="isExpired(currentNotification.expireTime)" color="default">已过期</Tag>
-            <Tooltip :title="`优先级: ${getPriorityStyle(currentNotification.priority).text}`">
-              <Tag :color="getPriorityStyle(currentNotification.priority).color">
-                {{ getPriorityStyle(currentNotification.priority).text }}优先级
-              </Tag>
-            </Tooltip>
-          </div>
-          <div class="detail-time">
-            <div>创建时间: {{ formatToDateTime(currentNotification.createTime) }}</div>
-            <div v-if="currentNotification.expireTime">
-              过期时间: {{ formatToDateTime(currentNotification.expireTime) }}
-            </div>
+            <span class="detail-time">{{ formatToDateTime(currentNotification.createTime) }}</span>
           </div>
         </div>
+        
         <div class="detail-content">
           <p>{{ currentNotification.content }}</p>
         </div>
-        <div class="detail-actions">
-          <Button 
-            v-if="currentNotification.targetId && currentNotification.targetType"
-            type="primary" 
-            @click="goToTarget(currentNotification)"
-          >
-            查看相关内容
-          </Button>
-          <Button 
-            type="default" 
-            @click="detailModal = false"
-          >
-            关闭
-          </Button>
-          <Button 
-            type="danger" 
-            @click="deleteNotification(currentNotification.id)"
-          >
-            删除
+        
+        <div v-if="currentNotification.lectureId" class="detail-actions">
+          <Button type="primary" @click="goToTarget(currentNotification)">
+            查看相关讲座
           </Button>
         </div>
       </div>
@@ -555,129 +452,98 @@ onMounted(() => {
 <style lang="less" scoped>
 .notification-container {
   padding: 16px;
-  background-color: #f0f2f5;
-  min-height: 100%;
   
   .notification-card {
-    background-color: #fff;
+    margin-bottom: 16px;
     
     .card-title {
       display: flex;
+      justify-content: space-between;
       align-items: center;
       
-      .notification-stats {
-        margin-left: 16px;
+      .card-actions {
         display: flex;
         align-items: center;
+        gap: 16px;
         
-        .stats-label {
-          margin-left: 4px;
-          margin-right: 16px;
-          font-size: 12px;
-          color: #888;
-        }
-      }
-    }
-    
-    .notification-list {
-      .notification-item {
-        cursor: pointer;
-        transition: all 0.3s;
-        
-        &:hover {
-          background-color: #f9f9f9;
-        }
-        
-        .notification-title {
+        .notification-stats {
           display: flex;
           align-items: center;
+          gap: 8px;
           
-          span {
-            margin-left: 8px;
-            margin-right: 8px;
+          .stats-label {
+            font-size: 14px;
+            color: rgba(0, 0, 0, 0.65);
           }
-        }
-        
-        .notification-content {
-          margin-left: 12px;
-          
-          .notification-text {
-            color: #666;
-            margin-bottom: 8px;
-          }
-          
-          .notification-meta {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 12px;
-            color: #999;
-            
-            div {
-              display: flex;
-              align-items: center;
-            }
-            
-            .priority-dot {
-              display: inline-block;
-              width: 10px;
-              height: 10px;
-              border-radius: 50%;
-              margin-left: 8px;
-            }
-          }
-        }
-        
-        .notification-actions {
-          display: flex;
-          align-items: center;
         }
       }
     }
   }
   
-  .notification-detail {
-    padding: 0 16px;
+  .notification-list {
+    margin-top: 8px;
     
-    .detail-title {
-      font-size: 18px;
-      font-weight: 500;
-      margin-bottom: 16px;
-    }
-    
-    .detail-meta {
-      margin-bottom: 16px;
+    .notification-item {
+      cursor: pointer;
+      padding: 16px;
+      transition: background-color 0.3s;
+      border-radius: 4px;
       
-      .detail-tags {
-        margin-bottom: 8px;
+      &:hover {
+        background-color: rgba(0, 0, 0, 0.02);
       }
       
-      .detail-time {
+      .notification-meta {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 8px;
+        color: rgba(0, 0, 0, 0.45);
         font-size: 12px;
-        color: #999;
+        margin-right: 16px;
+      }
+      
+      .notification-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+    }
+  }
+  
+  .notification-detail {
+    .detail-header {
+      margin-bottom: 24px;
+      
+      .detail-title {
+        margin-bottom: 8px;
+        font-size: 20px;
+        color: rgba(0, 0, 0, 0.85);
+      }
+      
+      .detail-meta {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: rgba(0, 0, 0, 0.45);
+        
+        .detail-time {
+          font-size: 14px;
+        }
       }
     }
     
     .detail-content {
-      padding: 16px;
-      background-color: #f9f9f9;
-      border-radius: 4px;
-      margin-bottom: 16px;
-      min-height: 100px;
-      
-      p {
-        margin: 0;
-        line-height: 1.6;
-      }
+      margin-bottom: 24px;
+      font-size: 16px;
+      line-height: 1.6;
+      color: rgba(0, 0, 0, 0.65);
     }
     
     .detail-actions {
       display: flex;
-      justify-content: flex-end;
-      
-      button {
-        margin-left: 8px;
-      }
+      justify-content: center;
+      margin-top: 16px;
     }
   }
 }

@@ -1,7 +1,7 @@
 /**
  * 讲座推荐API接口
  */
-import { request } from '@/utils/request';
+import { request } from '../../utils/request';
 
 // 定义讲座类型
 export interface LectureVo {
@@ -132,22 +132,4 @@ export function getInterestScoreApi(lectureId: number | string) {
     url: `/lecture/recommend/interestScore/${lectureId}`,
     method: 'get',
   });
-}
-
-// 定义一个假的VbenAdminAPI对象，用于模拟API调用
-const VbenAdminAPI = {
-  get: <T = any>(config: { url: string; params?: any }) => {
-    return Promise.resolve({
-      code: 200,
-      data: [] as T,
-      msg: '成功',
-    });
-  },
-  post: <T = any>(config: { url: string; data?: any; params?: any }) => {
-    return Promise.resolve({
-      code: 200,
-      data: [] as T,
-      msg: '成功',
-    });
-  },
-}; 
+} 
