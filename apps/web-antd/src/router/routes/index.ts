@@ -38,4 +38,22 @@ const coreRouteNames = traverseTreeValues(basicRoutes, (route) => route.name);
 
 /** 有权限校验的路由列表，包含动态路由和静态路由 */
 const accessRoutes = [...dynamicRoutes, ...staticRoutes];
+
+/**
+ * 加载路由模块
+ */
+function loadRouteModule() {
+  const modules = import.meta.glob<{ default: RouteRecordRaw }>('./modules/**/*.ts', {
+    eager: true,
+  });
+
+  return Object.keys(modules).reduce<RouteRecordRaw[]>((list, key) => {
+    const mod = modules[key].default;
+    if (mod) {
+      list.push(mod);
+    }
+    return list;
+  }, []);
+}
+
 export { accessRoutes, coreRouteNames, routes };

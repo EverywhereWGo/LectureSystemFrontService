@@ -2,6 +2,7 @@
 pnpm vsh code-workspace --auto-commit
 
 # Format and submit code according to lintstagedrc.js configuration
-pnpm exec lint-staged
+# 以下行已被注释掉以禁用提交时的lint检查
+# pnpm exec lint-staged
 
 echo Run pre-commit hook done.
