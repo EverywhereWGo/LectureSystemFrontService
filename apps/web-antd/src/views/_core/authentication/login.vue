@@ -11,6 +11,7 @@ import { DEFAULT_TENANT_ID } from '@vben/constants';
 import { $t } from '@vben/locales';
 
 import { omit } from 'lodash-es';
+import { message } from 'ant-design-vue';
 
 import { tenantList } from '#/api';
 import { captchaImage } from '#/api/core/captcha';
@@ -55,12 +56,27 @@ const tenantInfo = ref<TenantResp>({
 });
 
 async function loadTenant() {
-  const resp = await tenantList();
-  tenantInfo.value = resp;
-  // 选中第一个租户
-  if (resp.tenantEnabled && resp.voList.length > 0) {
-    const firstTenantId = resp.voList[0]!.tenantId;
-    loginFormRef.value?.getFormApi().setFieldValue('tenantId', firstTenantId);
+  try {
+    const resp = await tenantList();
+    tenantInfo.value = resp;
+    // 选中第一个租户
+    if (resp.tenantEnabled && resp.voList.length > 0) {
+      const firstTenantId = resp.voList[0]!.tenantId;
+      loginFormRef.value?.getFormApi().setFieldValue('tenantId', firstTenantId);
+    }
+  } catch (error) {
+    console.error('加载租户信息失败', error);
+    // 设置默认租户信息，防止UI报错
+    tenantInfo.value = {
+      tenantEnabled: false,
+      voList: []
+    };
+    // 如果是MapStruct类型转换错误，给用户提示
+    if (error instanceof Error && 
+        (error.message.includes('类型转换错误') || 
+         error.message.includes('cannot find converter'))) {
+      message.warning('租户信息加载失败，请联系系统管理员检查MapStruct配置');
+    }
   }
 }
 
@@ -152,12 +168,22 @@ async function handleAccountLogin(values: LoginAndRegisterParams) {
     // 登录
     await authStore.authLogin(requestParam);
   } catch (error) {
-    console.error(error);
+    console.error('登录失败', error);
     // 处理验证码错误
     if (error instanceof Error) {
+      // 对MapStruct类型转换错误进行特殊处理
+      if (error.message.includes('类型转换错误') || 
+          error.message.includes('cannot find converter') ||
+          error.message.includes('MapStruct')) {
+        message.warning('系统错误：MapStruct类型转换失败，请联系管理员修复此问题');
+        return;
+      }
+      
       // 刷新验证码
-      loginFormRef.value?.getFormApi().setFieldValue('code', '');
-      await loadCaptcha();
+      if (captchaInfo.value.captchaEnabled) {
+        loginFormRef.value?.getFormApi().setFieldValue('code', '');
+        await loadCaptcha();
+      }
     }
   }
 }

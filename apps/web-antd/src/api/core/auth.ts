@@ -77,13 +77,25 @@ export namespace AuthApi {
  * 登录
  */
 export async function loginApi(data: AuthApi.LoginParams) {
-  return requestClient.post<AuthApi.LoginResult>(
-    '/auth/login',
-    { ...data, clientId },
-    {
-      encrypt: true,
-    },
-  );
+  try {
+    return await requestClient.post<AuthApi.LoginResult>(
+      '/auth/login',
+      { ...data, clientId },
+      {
+        encrypt: true,
+      },
+    );
+  } catch (error) {
+    // 对类型转换错误进行特殊处理
+    if (error instanceof Error) {
+      if (error.message.includes('cannot find converter from SysTenant to SysTenantVo') ||
+          error.message.includes('cannot find converter from SysUser to SysUserVo')) {
+        console.error('类型转换错误:', error.message);
+        throw new Error('服务端类型转换错误，请联系系统管理员检查MapStruct配置');
+      }
+    }
+    throw error;
+  }
 }
 
 /**

@@ -1,6 +1,9 @@
 import type { RouteRecordStringComponent } from '@vben/types';
+import type { RouteRecordRaw } from 'vue-router';
 
 import { $t } from '@vben/locales';
+import { BasicLayout } from '#/layouts';
+import { AppRouteRecordRaw } from '@vben/types';
 
 /**
  * 该文件放非后台返回的路由 比如个人中心 等需要跳转显示的页面
@@ -85,7 +88,7 @@ const localRoutes: RouteRecordStringComponent[] = [
 /**
  * 这里放本地路由
  */
-export const localMenuList: RouteRecordStringComponent[] = [
+export const localMenuList: AppRouteRecordRaw[] = [
   {
     component: 'BasicLayout',
     meta: {
@@ -151,4 +154,88 @@ export const localMenuList: RouteRecordStringComponent[] = [
     path: '/vben-admin/about',
   },
   ...localRoutes,
+  {
+    component: 'BasicLayout',
+    meta: {
+      hideChildrenInMenu: false,
+      icon: 'ion:calendar-outline',
+      title: '讲座管理平台',
+      orderNo: 90,
+    },
+    name: 'LectureAdmin',
+    path: '/lecture',
+    children: [
+      {
+        component: '/views/lecture/lecture/index.vue',
+        meta: {
+          hideChildrenInMenu: false,
+          icon: 'ion:calendar-outline',
+          title: '讲座管理',
+          ignoreAuth: true,
+          ignoreAccess: true,
+        },
+        name: 'LectureManagement',
+        path: 'lecture',
+      },
+      {
+        component: '/views/lecture/venue/index.vue',
+        meta: {
+          hideChildrenInMenu: false,
+          icon: 'ion:location-outline',
+          title: '场地管理',
+          ignoreAuth: true,
+          ignoreAccess: true,
+        },
+        name: 'VenueManagement',
+        path: 'venue',
+      },
+      {
+        component: '/views/lecture/reservation/index.vue',
+        meta: {
+          hideChildrenInMenu: false,
+          icon: 'ion:book-outline',
+          title: '预约管理',
+          ignoreAuth: true,
+          ignoreAccess: true,
+        },
+        name: 'ReservationManagement',
+        path: 'reservation',
+      },
+      {
+        component: '/views/lecture/detail/index.vue',
+        meta: {
+          hideInMenu: true,
+          title: '讲座详情',
+          ignoreAuth: true,
+          ignoreAccess: true,
+        },
+        name: 'LectureDetail',
+        path: 'lecture/detail/:id',
+      },
+      {
+        component: '/views/lecture/stats/index.vue',
+        meta: {
+          hideChildrenInMenu: false,
+          icon: 'ion:stats-chart-outline',
+          title: '统计分析',
+          ignoreAuth: true,
+          ignoreAccess: true,
+        },
+        name: 'StatsManagement',
+        path: 'stats',
+      },
+      {
+        component: '/views/lecture/recommend/index.vue',
+        meta: {
+          hideChildrenInMenu: false,
+          icon: 'ion:thumbs-up-outline',
+          title: '推荐管理',
+          ignoreAuth: true,
+          ignoreAccess: true,
+        },
+        name: 'RecommendManagement',
+        path: 'recommend',
+      },
+    ],
+  }
 ];

@@ -97,33 +97,47 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function fetchUserInfo() {
-    const backUserInfo = await getUserInfoApi();
-    /**
-     * 登录超时的情况
-     */
-    if (!backUserInfo) {
-      throw new Error('获取用户信息失败.');
+    try {
+      const backUserInfo = await getUserInfoApi();
+      /**
+       * 登录超时的情况
+       */
+      if (!backUserInfo) {
+        throw new Error('获取用户信息失败.');
+      }
+      const { permissions = [], roles = [], user } = backUserInfo;
+      /**
+       * 从后台user -> vben user转换
+       */
+      const userInfo: UserInfo = {
+        avatar: user.avatar ?? '',
+        permissions,
+        realName: user.nickName,
+        roles,
+        userId: user.userId,
+        username: user.userName,
+      };
+      userStore.setUserInfo(userInfo);
+      /**
+       * 需要重新加载字典
+       * 比如退出登录切换到其他租户
+       */
+      const dictStore = useDictStore();
+      dictStore.resetCache();
+      return userInfo;
+    } catch (error) {
+      // 捕获并处理"无法找到转换器"的错误
+      if (error instanceof Error && error.message.includes('cannot find converter')) {
+        console.error('类型转换错误:', error.message);
+        notification.error({
+          message: '系统错误',
+          description: '数据类型转换失败，请联系系统管理员',
+          duration: 5
+        });
+        throw new Error('类型转换失败');
+      }
+      throw error;
     }
-    const { permissions = [], roles = [], user } = backUserInfo;
-    /**
-     * 从后台user -> vben user转换
-     */
-    const userInfo: UserInfo = {
-      avatar: user.avatar ?? '',
-      permissions,
-      realName: user.nickName,
-      roles,
-      userId: user.userId,
-      username: user.userName,
-    };
-    userStore.setUserInfo(userInfo);
-    /**
-     * 需要重新加载字典
-     * 比如退出登录切换到其他租户
-     */
-    const dictStore = useDictStore();
-    dictStore.resetCache();
-    return userInfo;
   }
 
   function $reset() {
